@@ -1,0 +1,179 @@
+/*
+ ** SaveToSANYO.fred
+ **
+ ** $VER: SaveToSANYO.fred 1.0.0 (20.12.94)
+ **
+ ** Ken Jennings
+ **
+ ** See SaveToSANYO.fred.pre for complete documentation.
+ **
+ ** We don't care if there is any image data in the current 
+ ** buffer, since a previously called saver will have displayed 
+ ** it on graphics board already.
+ **
+ ** Clips Imported:
+ **		FREDSANTimeCode	-	Starting NDF SMPTE timecode
+ **		FREDSANSFlimit	-	Threshold value for the number of 
+ **								single frame edits per cell 
+ **								which will cause a single multi-
+ **								frame APND
+ **
+ ** NOTE: Clip names are case sensitive.
+ **
+ ** This script requires FRED v1.4.0 (or higher) to run.  Also 
+ ** required is ADPro v2.5.0 (or higher).
+ **
+ ** Copyright 1994 SyntheToonz, Inc., Kenneth Jennings
+ ** All Rights Reserved
+ **
+ ** Internet: kenneth@daffy.aatech.com
+ */
+
+
+ADDRESS "ADPro"
+OPTIONS RESULTS
+
+PARSE ARG FrameNum FrameFName Length LoadFlag FirstCallSeq FirstCallCell
+
+NL = '0A'X
+SQ = '27'X
+DQ = '22'X
+TRUE  = 1
+FALSE = 0
+
+NULLSTRING = DQ || DQ
+
+
+/*
+ ** Get the required clips.
+ */
+
+TimeCode = GETCLIP( "FREDSANTimeCode" )
+IF (TimeCode = "") THEN DO
+	ADPRO_TO_FRONT
+	OKAY1 "Required clip, FREDSANTimeCode," || NL ||,
+		"is not specified."
+	SCREEN_TO_FRONT "FRED"
+	EXIT 10
+END
+
+SFlimit = GETCLIP( "FREDSANSFlimit" )
+IF (SFlimit = "") THEN DO
+	ADPRO_TO_FRONT
+	OKAY1 "Required clip, FREDSANSFlimit," || NL ||,
+		"is not specified."
+	SCREEN_TO_FRONT "FRED"
+	EXIT 10
+END
+
+
+/*
+ ** Try to startup the AREXX communications handler
+ */
+
+RXPort = StartRXComm()
+
+IF (RXPort = NULLSTRING) THEN DO
+	ADPRO_TO_FRONT
+	OKAY1 "Unable to start ARexx" || NL ||,
+		"communications handler."
+	SCREEN_TO_FRONT "FRED"
+	EXIT 10
+END
+
+
+/*
+ ** If this is frame 1 then send setup string 
+ ** and starting timecode to deck
+ */
+
+IF (FirstCallSeq = 1) THEN DO
+	CmdString = RX SQ||ADDRESS RXPort DQ||'EDTP5;INIT;EDOT:'||TimeCode||DQ||SQ
+	ADDRESS 'COMMAND' CmdString
+END
+
+
+/*
+ ** If frame count per cell is less than the single
+ ** frame edit threshold then loop for each edit.
+ **
+ ** Met or exceeded threshold means we do a single 
+ ** edit for the multiple frames in this cell.
+ */
+
+IF (Length < SFlimit) THEN DO
+	Count = 1
+
+	DO WHILE (Count <= Length)
+		CmdString = RX SQ||ADDRESS RXPort DQ||'APND 1'||DQ||SQ
+		ADDRESS 'COMMAND' CmdString
+		Count = Count + 1
+	END
+END
+ELSE DO
+	CmdString = RX SQ||ADDRESS RXPort DQ||'APND '||Length||DQ||SQ
+	ADDRESS 'COMMAND' CmdString
+END
+
+
+EXIT 0
+
+
+
+StartRXComm:
+	Handler1 = "SANARexxHandler"
+	Handler2 = "BCDARexxHandler"
+
+	IF (EitherPort() = NULLSTRING) THEN
+		CALL StartProgram(Handler1)
+
+	IF (EitherPort() = NULLSTRING) THEN
+		CALL StartProgram(Handler2)
+
+	RETURN EitherPort()
+
+
+
+StartProgram:
+	PARSE ARG ProgName
+
+	Max_Seconds_To_Load = 3
+	Flag = FALSE
+
+	TIME( 'R' )
+
+	DO WHILE ( (TIME( 'E' ) < Max_Seconds_To_Load) & (EitherPort() = NULLSTRING))
+		IF (Flag = FALSE) THEN DO
+			CmdString = "Run <NIL: >NIL:" ProgName "-t30 -a"
+			ADDRESS 'COMMAND' CmdString 
+			Flag = TRUE
+		END
+		ADDRESS 'COMMAND' 'Wait 1'
+	END
+
+	RETURN
+
+
+
+EitherPort:
+	RXPort1  = "SANARexx.port"
+	RXPort2  = "BCDAREXX.PORT"
+
+	IF (FindPort(RXPort1) ~= NULLSTRING) THEN
+		RETURN RXPort1
+
+	IF (FindPort(RXPort2) ~= NULLSTRING) THEN
+		RETURN RXPort2
+
+	RETURN NULLSTRING
+
+
+
+FindPort:
+	PARSE ARG PortName
+
+	IF ( SHOW( 'Ports', PortName ) = FALSE) THEN
+		RETURN NULLSTRING
+
+	RETURN PortName
+

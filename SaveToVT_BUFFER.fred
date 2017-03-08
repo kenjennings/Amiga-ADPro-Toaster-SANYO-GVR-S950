@@ -1,0 +1,204 @@
+/*
+ ** SaveToVT_BUFFER.fred
+ **
+ ** $VER: SaveToVT_BUFFER.fred 1.0.0 (20.12.94)
+ **
+ ** Ken Jennings
+ **
+ ** This program can be run from an InvokeADPro list to save 
+ ** images to the Video Toaster display board.  Including this 
+ ** program automatically causes a .pre script to be executed as 
+ ** well (to select the DV channel and the Scale option).
+ **
+ ** Clips Imported:
+ **		FREDVTBuffer	-	Which Toaster DV channel to save the 
+ **								image in
+ **									1 = DV1
+ **									2 = DV2
+ **		FREDVTScaleOpt	-	Scale option if image is not correct 
+ **								the correct Toaster frame size
+ **									0 = Do nothing, 
+ **									1 = Scale to normal frame size
+ **									2 = Center on a backdrop
+ **
+ ** NOTE: Clip names are case sensitive.
+ **
+ ** This script requires FRED v1.4.0 (or higher) to run.  Also 
+ ** required is ADPro v2.5.0 (or higher).
+ **
+ ** Copyright 1994 SyntheToonz, Inc., Kenneth Jennings
+ ** All Rights Reserved
+ **
+ ** Internet: kenneth@daffy.aatech.com
+ */
+
+
+ADDRESS "ADPro"
+OPTIONS RESULTS
+
+
+PARSE ARG FrameNum FrameFName Length LoadFlag FirstCallSeq FirstCallCell
+
+
+NL = '0A'X
+SQ = '27'X
+DQ = '22'X
+TRUE  = 1
+FALSE = 0
+ToasterWidth = 752
+ToasterHeight = 480
+
+
+/*
+ ** Get the required clips.
+ */
+
+ToasterDV = GETCLIP( "FREDVTBuffer" )
+
+IF (ToasterDV = "") THEN DO
+	ADPRO_TO_FRONT
+	OKAY1 "Required clip, FREDVTBuffer," || NL ||,
+		"is not specified."
+	SCREEN_TO_FRONT "FRED"
+	EXIT 10
+END
+
+ScaleOpt = GETCLIP( "FREDVTScaleOpt" )
+
+IF (ScaleOpt = "") THEN DO
+	ADPRO_TO_FRONT
+	OKAY1 "Required clip, FREDVTScaleOpt," || NL ||,
+		"is not specified."
+	SCREEN_TO_FRONT "FRED"
+	EXIT 10
+END
+
+
+/*
+ ** Check to see if Toaster is running
+ */
+
+IF (~SHOW( 'P', "ToasterARexx.port" )) THEN DO
+	ADPRO_TO_FRONT
+	OKAY1 "Switcher is not running!"
+	ADPRO_TO_BACK
+	EXIT 10
+END
+
+
+/*
+ ** See what type of data is loaded in ADPro/MorphPlus.
+ */
+
+CALL "FREDSCRIPTS:FREDFunctions/CheckForRawImageData" TRUE
+IF (RESULT ~= 0) THEN DO
+	ADPRO_TO_FRONT
+	OKAY1 "No RAW image data in memory!"
+	ADPRO_TO_BACK
+	EXIT 10
+END
+
+
+/*
+ ** Check Image Size
+ */
+
+XSIZE
+ImageWidth  = ADPRO_RESULT
+
+YSIZE
+ImageHeight = ADPRO_RESULT
+
+IF (ImageWidth ~= ToasterWidth) | (ImageHeight ~= ToasterHeight) THEN DO
+
+	IF (ScaleOpt = 1) THEN DO
+		/*
+		 ** MAKE it fit the Toaster frame buffer
+		 */
+
+		/*
+		 ** Adjust the pixel aspect of the image.
+		 */
+		OPERATOR "DEFINE_PXL_ASPECT" 22 26
+		IF (RC ~= 0) THEN DO
+			ADPRO_TO_FRONT
+			OKAY1 "Could not define pixel aspect ratio."
+			ADPRO_TO_BACK
+			EXIT 10
+		END
+
+		/*
+		 ** Scale the image to fill a ToasterWidth x ToasterHeight screen.
+		 */
+		ABS_SCALE ToasterWidth ToasterHeight
+		IF (RC ~= 0) THEN DO
+			ADPRO_TO_FRONT
+			OKAY1 "Could not scale to Toaster frame size."
+			ADPRO_TO_BACK
+			EXIT 10
+		END
+
+	END
+
+	IF (ScaleOpt = 2) THEN DO
+		/*
+		 ** CENTER the image on a backdrop
+		 */
+
+		/*
+		 ** Save current image to TEMP
+		 */
+		SAVER  "TEMP" "XXX" "RAW"
+		IF (RC ~= 0) THEN DO
+			ADPRO_TO_FRONT
+			OKAY1 "Could not save image to TEMP."
+			ADPRO_TO_BACK
+			EXIT 10
+		END
+
+		/*
+		 ** Load a solid backdrop of the correct size
+		 */
+		LOADER "BACKDROP" "XXX" WIDTH ToasterWidth HEIGHT ToasterHeight COLOR FILL 40 40 100
+		IF (RC ~= 0) THEN DO
+			ADPRO_TO_FRONT
+			OKAY1 "Could not create a backdrop."
+			ADPRO_TO_BACK
+			EXIT 10
+		END
+
+		/*
+		 ** Load original image in center of backdrop
+		 */
+		CenterX = (ToasterWidth / 2) - (ImageWidth / 2)
+		CenterY = (ToasterHeight / 2) - (ImageHeight / 2)
+
+		LOADER "TEMP" "XXX" COMPOFFSET CenterX CenterY COMPMIX 100
+		IF (RC ~= 0) THEN DO
+			ADPRO_TO_FRONT
+			OKAY1 "Could not reload TEMP image."
+			ADPRO_TO_BACK
+			EXIT 10
+		END
+
+	END
+
+END
+
+
+/*
+ ** Send image to the display board.
+ */
+
+SAVER "VT_BUFFER" "XXX" BUFFER ToasterDV
+IF (RC ~= 0) THEN DO
+	Why = ADPRO_RESULT
+	ADPRO_TO_FRONT
+	OKAY1 "VT_BUFFER save failed:" || NL || Why || NL ||,
+		"Argument Information:" || NL ||,
+		"BUFFER = " || ToasterDV
+	SCREEN_TO_FRONT "FRED"
+	EXIT 10
+END
+
+EXIT 0

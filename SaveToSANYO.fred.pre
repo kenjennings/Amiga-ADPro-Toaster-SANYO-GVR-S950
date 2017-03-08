@@ -1,0 +1,218 @@
+/*
+ ** SaveToSANYO.fred.pre
+ **
+ ** $VER: SaveToSANYO.fred.pre 1.0.0 (20.12.94)
+ **
+ ** Ken Jennings
+ **
+ ** SaveToSANYO.fred.pre documentation:
+ **
+ ** If the SaveToSANYO.fred script appears in the InvokeADPro 
+ ** list, this program will ask the user to select the 
+ ** starting NDF SMPTE timecode, and the single frame/multi-
+ ** frame edit threshold.
+ **
+ ** The SMPTE timecode validation is fairly unforgiving, since
+ ** it requires all the digits (including leading zeros) be 
+ ** present, but at least it prevents bogus values.  My excuse
+ ** is that I wrote it in ten minutes.
+ **
+ ** SaveToSANYO.fred documentation:
+ **
+ ** This program can be run from an InvokeADPro list to save 
+ ** images to the SANYO GVR-S950 (or compatible BCD equipment) 
+ ** single frame VTR.  Including this program automatically 
+ ** causes a pre script to be executed as well to ask the user 
+ ** to select the communication command filename, the starting 
+ ** timecode, and the single frame/multiple frame edit threshold.
+ **
+ ** Normally, multiple frames per cell will result in a single 
+ ** frame edit for each frame.  If the number of frames exceeds 
+ ** or equals the given threshold, then a single APND event will 
+ ** occur for the cell. We at SyntheToonz find this useful to 
+ ** make the 10 second (300 frame) static images at the beginning
+ ** and end of the animations which make editing from the ani-
+ ** mation master tape to another tape easier.  It is not a good 
+ ** idea to use the threshold to make pauses in the middle of a 
+ ** rolling animation.  In our experience, the video signal 
+ ** shifts and the quality visibly changes, and even with a TBC 
+ ** the video playback is still not stable.
+ **
+ ** Note: Communications with the deck is accomplished by sending 
+ ** commands to the ARexx port of another program which actually
+ ** handles talking to the deck.  The script will first try to 
+ ** locate the port SANARexx.port, and then the port 
+ ** BCDAREXX.PORT.  If neither port is located, then the program 
+ ** will first attempt to run the SANARexxHandler program, and 
+ ** then the BCDARexxHandler program.  Afterwards, the script 
+ ** will try to find one of the Arexx ports again.  If the script 
+ ** still fails, then the user is notified of the problem.
+ **
+ ** Note also: This program is tested on the SANYO GVR-S950 deck 
+ ** using the SANARexxHandler program.  While the documentation 
+ ** (based largely on information from BCD) says the ARexx port 
+ ** to use is called SANARexx.port, it really is BCDAREXX.PORT. 
+ ** Since I get the feeling SANYO is trying hard to SANYO-tize 
+ ** their documentation and supporting programs, I believe at 
+ ** some point in the future the ARexx port name will change to 
+ ** what is documented in their manual.
+ **
+ ** Those fluent in ARexx may wonder why the ARexx communication 
+ ** with the BCD/SANARexx.port is so convoluted.  The reason is, 
+ ** that after exhaustive testing, this is the only way the port 
+ ** would accept and process commands on our system.  The 
+ ** development system is an A2000 with a GVP 33MHz 040 with a 
+ ** Toaster.  We adamantly avoid running PD hacks or even the 
+ ** standard commodities on our system.  The ARexx communications 
+ ** work if a command is manually typed and executed in the Shell 
+ ** with the RX command.  The exact same command sent to the 
+ ** BCD/SANARexx.port from a script fails.  There is no error and 
+ ** no results, as if the command were diverted or suppressed 
+ ** before it reached the port.  Anyway, communication is 
+ ** accomplished by building a messy RX command string with the 
+ ** necessary embedded quotes and using the Shell to execute the 
+ ** generated command string.  This is messy, but at least it
+ ** works.
+ **
+ ** Clips Exported:
+ **		FREDSANTimeCode	-	Starting NDF SMPTE timecode
+ **		FREDSANSFlimit	-	Threshold value for the number of 
+ **								single frame edits per cell 
+ **								which will cause a single multi-
+ **								frame APND
+ **
+ ** NOTE: Clip names are case sensitive.
+ **
+ ** This script requires FRED v1.4.0 (or higher) to run.  Also 
+ ** required is ADPro v2.5.0 (or higher).
+ **
+ ** Copyright 1994 SyntheToonz, Inc., Kenneth Jennings
+ ** All Rights Reserved
+ **
+ ** Internet: kenneth@daffy.aatech.com
+ */
+
+
+ADDRESS "ADPro"
+OPTIONS RESULTS
+
+PARSE ARG NumberOfCells NumberOfFrames
+
+NL = '0A'X
+SQ = '27'X
+DQ = '22'X
+TRUE  = 1
+FALSE = 0
+
+NULLSTRING = DQ || DQ
+ValidTC = FALSE
+
+ADPRO_TO_FRONT
+
+
+/*
+ ** Ask the user to enter the starting timecode.
+ */
+
+TimeCode = "00:00:00:00"
+
+DO loop=1 UNTIL (ValidTC = TRUE)
+	Message = "Enter starting NDF SMPTE" || NL || "timecode as HH:MM:SS:FF"
+	CALL "FREDSCRIPTS:FREDFunctions/GetAString" '"'Message'"' '"'TimeCode'"' TRUE
+
+	TimeCode = RESULT
+
+	IF (TimeCode = NULLSTRING) THEN
+		EXIT 10
+
+	TimeCode = STRIP(TimeCode)
+
+	IF (LENGTH(TimeCode) ~= 11) THEN DO
+		Message = "Invalid SMPTE TimeCode" || NL || "(Length)"
+		OKAY1 '"'Message'"'
+		ITERATE loop
+	END
+
+	Sep1     = SUBSTR(TimeCode, 3, 1)
+	Sep2     = SUBSTR(TimeCode, 6, 1)
+	Sep3     = SUBSTR(TimeCode, 9, 1)
+
+	IF (Sep1 ~= ':') | (Sep2 ~= ':') | (Sep3 ~= ':') THEN DO
+		Message = "Invalid SMPTE TimeCode" || NL || "(: separators)"
+		OKAY1 '"'Message'"'
+		ITERATE loop
+	END
+
+	HHdigits = SUBSTR(TimeCode, 1, 2)
+	MMdigits = SUBSTR(TimeCode, 4, 2)
+	SSdigits = SUBSTR(TimeCode, 7, 2)
+	FFdigits = SUBSTR(TimeCode, 10,2)
+
+	IF (ValidateSMPTEdigits(HHdigits, 0, 23, 'hours')   = FALSE) THEN
+		ITERATE loop
+
+	IF (ValidateSMPTEdigits(MMdigits, 0, 59, "minutes") = FALSE) THEN
+		ITERATE loop
+
+	IF (ValidateSMPTEdigits(SSdigits, 0, 59, "seconds") = FALSE) THEN
+		ITERATE loop
+
+	IF (ValidateSMPTEdigits(FFdigits, 0, 29, "frames")  = FALSE) THEN
+		ITERATE loop
+
+	ValidTC = TRUE
+END
+
+
+/*
+ ** Ask the user for the single frame edit limit threshold per cell.
+ */
+
+CALL "FREDSCRIPTS:FREDFunctions/GetANumber" '"'"Enter Single Frame" || NL || "edit limit per cell"'"' 300 2 900 TRUE
+IF (RESULT = (2-1)) THEN
+	EXIT 10
+SFlimit = RESULT
+
+
+/*
+ ** Update the clips.
+ */
+
+SETCLIP( "FREDSANTimeCode", TimeCode )
+SETCLIP( "FREDSANSFlimit", SFlimit )
+
+EXIT 0
+
+
+
+/*
+ ** Make sure a set of SMPTE digits is numeric and 
+ ** falls within the accepted range
+ */
+
+ValidateSMPTEdigits:
+	PARSE ARG STRdigits, MINdigits, MAXdigits, sectionText
+
+	IF ( DATATYPE(STRdigits, Numeric) = FALSE) THEN DO
+		Message = "Invalid SMPTE TimeCode" || NL ||,
+			 "(" || sectionText STRdigits "not numeric)"
+		OKAY1 '"'Message'"'
+		return FALSE
+	END
+
+	IF (STRdigits < MINdigits) THEN DO
+		Message = "Invalid SMPTE TimeCode" || NL ||,
+			"(" || sectionText STRdigits "<" MINdigits || ")"
+		OKAY1 '"'Message'"'
+		return FALSE
+	END
+
+	IF (STRdigits > MAXdigits) THEN DO
+		Message = "Invalid SMPTE TimeCode" || NL ||,
+			"(" || sectionText STRdigits ">" MAXdigits || ")"
+		OKAY1 '"'Message'"'
+		return FALSE
+	END
+
+return TRUE
+

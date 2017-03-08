@@ -1,0 +1,123 @@
+/*
+ ** TestBCDAREXX.fred
+ **
+ ** $VER: TestBCDAREXX.fred 1.0.0 (20.12.94)
+ **
+ ** Also required is ADPro v2.5.0 (or higher).
+ **
+ ** Copyright 1994 SyntheToonz, Inc., Kenneth Jennings
+ ** All Rights Reserved
+ **
+ ** Internet: kenneth@daffy.aatech.com
+ **
+ ** This script can be run from the shell: rx ScriptTest.fred
+ ** or it can be called from FRED as part of a script list.
+ **
+ ** Prior to running this script from the CLI I had running:
+ ** 	1: ADPro 
+ ** 	2: FRED 
+ ** 	3: Video Toaster Switcher 
+ ** 	4: SANARexxHandler 
+ ** 	5: The GVR-S950 was initialized with SANSETUP.BAT
+ ** 	    (And a previously striped tape was loaded)
+ **
+ ** Because we use the Toaster, we go out of our way to make 
+ ** sure we don't have any strange commodities or other toys
+ ** running on the system.
+ **
+ ** System in use: 
+ ** 	A2000, GVP 33MHz 040, 16M RAM
+ ** 	TBC II, TBC III, (neither one hooked to serial port)
+ ** 	SunRize AD516, (not running or active during tests)
+ ** 	425M Quantum (int), 105M Quantum (ext), 88M Syquest (ext)
+ ** 
+ ** NONE of the attempts to directly communicate with 
+ ** BCDAREXX.PORT in this script succeeded.  In other words 
+ ** NOTHING happened to the deck, but no error was returned to 
+ ** the REXX host.  The following command strings work when 
+ ** entered directly from a Shell/CLI:
+ **
+ ** 6.>rx "ADDRESS  BCDAREXX.PORT   INIT
+ ** 6.>rx "ADDRESS  BCDAREXX.PORT   INIT"
+ ** 6.>rx "ADDRESS 'BCDAREXX.PORT'  INIT"
+ ** 6.>rx "ADDRESS  BCDAREXX.PORT  'INIT'"
+ ** 6.>rx "ADDRESS 'BCDAREXX.PORT' 'INIT'"
+ */
+
+
+ADDRESS "ADPro"
+OPTIONS RESULTS
+
+/* arguments are irrelavent for this script */
+PARSE ARG FrameNum FrameFName Length LoadFlag FirstCallSeq FirstCallCell
+
+
+RXPort = "BCDAREXX.PORT"
+
+
+SCREEN_TO_FRONT "FRED"
+
+
+/*
+ ** Now, try to get deck to do something.
+ ** INIT will just start rolling the tape and stop.
+ */
+
+/* This works. TELLSAN is a CLI utility to send commands to the deck */
+address 'COMMAND' 'TELLSAN "INIT"'
+OKAY1 "One"
+
+/* This does not work.*/
+ADDRESS BCDAREXX.PORT INIT
+OKAY1 "Two"
+
+/* This works */
+ADDRESS 'COMMAND' 'RX "ADDRESS BCDAREXX.PORT INIT"'
+OKAY1 "Three"
+
+/* This works */
+CmdString = RX '"'ADDRESS RXPort INIT'"'
+OKAY1 CmdString
+ADDRESS 'COMMAND' CmdString
+OKAY "Four"
+
+/* This works */
+CmdString = RX '"'ADDRESS RXPort "INIT" '"'
+OKAY1 CmdString
+ADDRESS 'COMMAND' CmdString
+OKAY "Five"
+
+/* None of the remaining examples work */
+
+/* Show that ADPro is current */
+Adrs = ADDRESS()
+OKAY1 Adrs
+
+/* Set New Address to BCDAREXX.PORT */
+ADDRESS VALUE RXPort 
+/* Show that BCDAREXX.PORT is current */
+Adrs = ADDRESS()
+ADDRESS "ADPro" OKAY1 '"'Adrs'"'
+
+INIT
+ADDRESS "ADPro" OKAY1 "Six"
+
+'INIT'
+ADDRESS "ADPro" OKAY1 "Seven"
+
+"INIT"
+ADDRESS "ADPro" OKAY1 "Eight"
+
+/* Reset address to ADPro */
+ADDRESS
+Adrs = ADDRESS()
+OKAY1 Adrs
+
+/* One Last test */
+CmdString = "ADDRESS" RXPort 'INIT'
+OKAY1 CmdString
+INTERPRET CmdString
+OKAY1 "Nine"
+
+
+EXIT 0

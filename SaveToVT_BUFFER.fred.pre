@@ -1,0 +1,93 @@
+/*
+ ** SaveToVT_BUFFER.fred.pre
+ **
+ ** $VER: SaveToVT_BUFFER.fred.pre 1.0.0 (20.12.94)
+ **
+ ** Ken Jennings
+ **
+ ** If the SaveToVT_BUFFER.fred script appears in the InvokeADPro list,
+ ** this program will ask the user to select the DV channel to display
+ ** the image in, and the Scale option if the image isn't the correct size
+ ** for a Toaster frame/image.
+ **
+ ** Clips Exported:
+ **		FREDVTBuffer	-	Which Toaster DV channel to save the 
+ **								image in
+ **									1 = DV1
+ **									2 = DV2
+ **		FREDVTScaleOpt	-	Scale option if image is not correct 
+ **								the correct Toaster frame size
+ **									0 = Do nothing, 
+ **									1 = Scale to normal frame size
+ **									2 = Center on a backdrop
+ **
+ ** NOTE: Clip names are case sensitive.
+ **
+ ** This script requires FRED v1.4.0 (or higher) to run.  Also 
+ ** required is ADPro v2.5.0 (or higher).
+ **
+ ** Copyright 1994 SyntheToonz, Inc., Kenneth Jennings
+ ** All Rights Reserved
+ **
+ ** Internet: kenneth@daffy.aatech.com
+ */
+
+
+ADDRESS "ADPro"
+OPTIONS RESULTS
+
+PARSE ARG NumberOfCells NumberOfFrames
+
+NL = '0A'X
+SQ = '27'X
+DQ = '22'X
+TRUE  = 1
+FALSE = 0
+
+
+ADPRO_TO_FRONT
+
+
+/*
+ ** Ask how scaling (should it be necessary) will be done.
+ */
+
+OKAYN '"SaveToVT_BUFFER.fred"',
+	'"If image is not 752 x 480:"',
+	'" As Is | Scale | Center | Cancel "'
+
+IF (RC = 0) THEN DO
+	SCREEN_TO_FRONT "FRED"
+	EXIT 10
+END
+
+ScaleOpt = RC - 1
+
+
+/*
+ ** Ask the user which Toaster DV channel to use.
+ */
+
+OKAYN '"SaveToVT_BUFFER.fred"',
+	'"Display image in which Toaster DV channel?"',
+	'" DV1 | DV2 | Cancel "'
+
+IF (RC = 0) THEN DO
+	SCREEN_TO_FRONT "FRED"
+	EXIT 10
+END
+
+ToasterDV = RC
+
+
+SCREEN_TO_FRONT "FRED"
+
+
+/*
+ ** Update the clips.
+ */
+
+SETCLIP( "FREDVTBuffer", ToasterDV )
+SETCLIP( "FREDVTScaleOpt", ScaleOpt )
+
+EXIT 0
