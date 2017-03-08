@@ -1,1 +1,2 @@
-*.rb linguist-language=ARexx
+*.fred linguist-language=ARexx
+*.pre linguist-language=ARexx
