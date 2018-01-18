@@ -1,20 +1,27 @@
 # Amiga-ADPro-Toaster-SANYO-GVR-S950
-Amiga Arexx scripts integrating Art Department Pro, Video Toaster, and Sanyo GVRS-950 SVHS single-frame video recorded.
 
-Short:        ADPro FrED (ARexx) Scripts
-Author:       Kenneth Jennings
-Uploader:     kenneth at daffy aatech com
-Type:         arexx source
-Architecture: m68k-amigaos
-Distribution: Interplanetary distribution OK.
+Amiga Arexx scripts integrating Art Department Pro, Video Toaster, and the Sanyo GVRS-950 SVHS single-frame video recorder.
 
-SaveToSANYO.fred         - Sanyo GVR-S950 saver script
-SaveToSANYO.fred.pre     - .pre script
+Originally released to Aminet.
 
-SaveToVT_BUFFER.fred     - Video Toaster saver script
-SaveToVT_BUFFER.fred.pre - .pre script
+Aminet field | Description
+--- | ---
+Short: |        ADPro FrED (ARexx) Scripts
+Author:  |     Kenneth Jennings
+Uploader: |    kenneth at daffy aatech com
+Type:      |   arexx source
+Architecture: | m68k-amigaos
+Distribution: | Interplanetary distribution OK.
 
-TestBCDAREXX.fred        - BCDARexxHandler test program
+---
+
+Programs | Description
+--- | ---
+SaveToSANYO.fred         | Sanyo GVR-S950 saver script
+SaveToSANYO.fred.pre     | ADPro fred .pre (init) script
+SaveToVT_BUFFER.fred     | Video Toaster video buffer saver script
+SaveToVT_BUFFER.fred.pre | ADPro Fred .pre (init) script
+TestBCDAREXX.fred        | BCDARexxHandler test program
 
 
 Save the scripts in ADPro's FrEDSAVERS directory.  
@@ -24,10 +31,10 @@ Write if you have problems or have
 suggestions for improvements.
 
 For the SaveToSANYO script you need to have 
-the SANArexxHandler program which came on the 
-Amiga FreeDisk with the Sanyo GVR-S950 
-somewhere in the search path.  (in the C: 
-directory is ideal.)
+the SANArexxHandler program somewhere in the search path.  (in the C: 
+directory is ideal.)  The program is on the 
+Amiga FreeDisk packaged with the Sanyo GVR-S950.
+
 
 The Toaster Switcher must be running in order 
 to use the SaveToVT_BUFFER saver.
