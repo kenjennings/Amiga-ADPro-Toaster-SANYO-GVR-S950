@@ -1,6 +1,6 @@
 # Amiga-ADPro-Toaster-SANYO-GVR-S950
 
-Amiga Arexx scripts integrating Art Department Pro, Video Toaster, and the Sanyo GVRS-950 SVHS single-frame video recorder.
+Amiga Arexx scripts integrating Art Department Pro with FrED, the Video Toaster, and the Sanyo GVRS-950 SVHS single-frame video recorder.
 
 Originally released to Aminet.
 
