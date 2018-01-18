@@ -18,9 +18,9 @@ Distribution: | Interplanetary distribution OK.
 Programs | Description
 --- | ---
 SaveToSANYO.fred         | Sanyo GVR-S950 saver script
-SaveToSANYO.fred.pre     | ADPro fred .pre (init) script
+SaveToSANYO.fred.pre     | ADPro FrED .pre (init) script
 SaveToVT_BUFFER.fred     | Video Toaster video buffer saver script
-SaveToVT_BUFFER.fred.pre | ADPro Fred .pre (init) script
+SaveToVT_BUFFER.fred.pre | ADPro FrED .pre (init) script
 TestBCDAREXX.fred        | BCDARexxHandler test program
 
 
