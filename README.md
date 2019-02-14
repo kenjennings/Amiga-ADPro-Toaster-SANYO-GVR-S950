@@ -2,6 +2,18 @@
 
 Amiga Arexx scripts integrating Art Department Pro with FrED, the Video Toaster, and the Sanyo GVRS-950 SVHS single-frame video recorder.
 
+---
+
+At the time we were running SyntheToonz/Equine Video Studios a decent length, full-motion animation could take hundreds of megabytes to store on disk.  We just didn't have that much space available, or the money to buy buckets of more disk space.
+
+I wrote this script to let us render a frame at a time, and write out the video frame to SVHS tape when rendered, so the computer only needed to have the one frame on disk at a time.  Lightwave was a pretty good, and fast renderer without ray tracing, so a project could be committed to tape overnight.  (Provided lightwave did not crash which was more common than we liked.)
+
+This script monitors frames being output by the Lightwave renderer, may direct ADPro to perform some post processing on it (i.e. composite a watermark/credit on the videe frame), then ADPro loads the frame into the Toaster frame buffer, and then the script directs the GVRS-950 VCR over the serial interface to capture one frame on tape.   Frame counts and timestamps are incremented, and the whole process repeats.   In the event Lightwave crashed it was not too dificult to figure out where to resume and begin rendering/tape writing again.
+
+A bug I could never get past is that the documented utility to talk to the VCR would not work directly from the Arexx script.   Look at the script to see the weird shenanigans I had to pull off to make this function.  Someday I would like to know what is wrong with this.
+
+---
+
 Originally released to Aminet.
 
 Aminet field | Description
